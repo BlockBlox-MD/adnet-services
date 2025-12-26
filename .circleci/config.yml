@@ -1,0 +1,111 @@
+version: 2.1
+
+parameters:
+  medium:
+    type: string
+    default: medium
+  large:
+    type: string
+    default: large
+
+executors:
+  rust-docker:
+    docker:
+      - image: cimg/rust:1.82.0
+    resource_class: << pipeline.parameters.medium >>
+
+commands:
+  setup_environment:
+    description: "Setup testing environment"
+    parameters:
+      cache_key:
+        type: string
+        default: v1.0.0-rust-1.82.0-adnet-services-cache
+    steps:
+      - run:
+          name: Install Debian packages
+          command: |
+            DEBIAN_FRONTEND=noninteractive sudo apt-get update
+            DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --no-install-recommends clang llvm-dev llvm pkg-config libssl-dev
+      - restore_cache:
+          keys:
+            - << parameters.cache_key >>-{{ checksum "Cargo.lock" }}
+            - << parameters.cache_key >>
+
+  clear_environment:
+    description: "Clear environment"
+    parameters:
+      cache_key:
+        type: string
+        default: v1.0.0-rust-1.82.0-adnet-services-cache
+    steps:
+      - save_cache:
+          key: << parameters.cache_key >>-{{ checksum "Cargo.lock" }}
+          paths:
+            - ~/.cargo/registry
+            - ~/.cargo/git
+            - target
+
+  install_rust_nightly:
+    description: "Install Rust nightly toolchain"
+    steps:
+      - run: rustup toolchain install nightly-x86_64-unknown-linux-gnu
+
+jobs:
+  check-fmt:
+    executor: rust-docker
+    steps:
+      - checkout
+      - install_rust_nightly
+      - setup_environment:
+          cache_key: v1.0.0-rust-1.82.0-adnet-services-fmt-cache
+      - run:
+          name: Check style
+          command: cargo +nightly fmt --all -- --check
+      - clear_environment:
+          cache_key: v1.0.0-rust-1.82.0-adnet-services-fmt-cache
+
+  check-clippy:
+    executor: rust-docker
+    steps:
+      - checkout
+      - setup_environment:
+          cache_key: v1.0.0-rust-1.82.0-adnet-services-clippy-cache
+      - run:
+          name: Check Clippy
+          command: cargo clippy --workspace --all-targets -- -D warnings
+      - clear_environment:
+          cache_key: v1.0.0-rust-1.82.0-adnet-services-clippy-cache
+
+  test-block-cdn:
+    executor: rust-docker
+    steps:
+      - checkout
+      - setup_environment
+      - run:
+          name: Test block-cdn
+          command: cargo test -p adnet-block-cdn
+      - clear_environment
+
+  test-zk-params:
+    executor: rust-docker
+    steps:
+      - checkout
+      - setup_environment
+      - run:
+          name: Test zk-params
+          command: cargo test -p adnet-zk-params
+      - clear_environment
+
+workflows:
+  version: 2
+
+  quality-workflow:
+    jobs:
+      - check-fmt
+      - check-clippy
+
+  test-workflow:
+    jobs:
+      - test-block-cdn
+      - test-zk-params
