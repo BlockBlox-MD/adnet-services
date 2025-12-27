@@ -7,11 +7,11 @@
 //! Supports single block downloads, batch ranges, and block metadata queries.
 
 use axum::{
-    Router,
     extract::{Path, Query, State},
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
+    Router,
 };
 use clap::Parser;
 use serde::Deserialize;
@@ -23,7 +23,7 @@ use tower_http::{
     cors::{Any, CorsLayer},
     limit::RequestBodyLimitLayer,
 };
-use tracing::{info, warn, error, Level};
+use tracing::{error, info, warn, Level};
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(Parser, Debug)]
@@ -67,7 +67,11 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     // Initialize logging
-    let level = if args.verbose { Level::DEBUG } else { Level::INFO };
+    let level = if args.verbose {
+        Level::DEBUG
+    } else {
+        Level::INFO
+    };
     let subscriber = FmtSubscriber::builder()
         .with_max_level(level)
         .with_target(false)
@@ -80,7 +84,11 @@ async fn main() -> anyhow::Result<()> {
         warn!("Creating directory structure...");
         for chain in CHAINS {
             for network in NETWORKS {
-                let block_dir = args.blocks_dir.join(chain).join(format!("v{}", BLOCK_FORMAT_VERSION)).join(network);
+                let block_dir = args
+                    .blocks_dir
+                    .join(chain)
+                    .join(format!("v{}", BLOCK_FORMAT_VERSION))
+                    .join(network);
                 fs::create_dir_all(&block_dir).await?;
                 info!("Created: {:?}", block_dir);
             }
@@ -96,10 +104,19 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/chains", get(list_chains))
-        .route("/{chain}/v{version}/{network}/latest", get(get_latest_height))
+        .route(
+            "/{chain}/v{version}/{network}/latest",
+            get(get_latest_height),
+        )
         .route("/{chain}/v{version}/{network}/blocks", get(list_blocks))
-        .route("/{chain}/v{version}/{network}/blocks/{height}", get(get_block))
-        .route("/{chain}/v{version}/{network}/blocks/{height}/checksum", get(get_block_checksum))
+        .route(
+            "/{chain}/v{version}/{network}/blocks/{height}",
+            get(get_block),
+        )
+        .route(
+            "/{chain}/v{version}/{network}/blocks/{height}/checksum",
+            get(get_block_checksum),
+        )
         .route("/{chain}/v{version}/{network}/range", get(get_block_range))
         .layer(CompressionLayer::new())
         .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any))
@@ -143,7 +160,11 @@ async fn list_blocks(
 ) -> Result<impl IntoResponse, AppError> {
     validate_chain_network(&chain, &network)?;
 
-    let blocks_dir = state.blocks_dir.join(&chain).join(format!("v{}", version)).join(&network);
+    let blocks_dir = state
+        .blocks_dir
+        .join(&chain)
+        .join(format!("v{}", version))
+        .join(&network);
 
     if !blocks_dir.exists() {
         return Ok(axum::Json(serde_json::json!({
@@ -203,7 +224,11 @@ async fn get_latest_height(
 ) -> Result<impl IntoResponse, AppError> {
     validate_chain_network(&chain, &network)?;
 
-    let blocks_dir = state.blocks_dir.join(&chain).join(format!("v{}", version)).join(&network);
+    let blocks_dir = state
+        .blocks_dir
+        .join(&chain)
+        .join(format!("v{}", version))
+        .join(&network);
 
     if !blocks_dir.exists() {
         return Ok(axum::Json(serde_json::json!({
@@ -246,7 +271,8 @@ async fn get_block(
 ) -> Result<Response, AppError> {
     validate_chain_network(&chain, &network)?;
 
-    let block_path = state.blocks_dir
+    let block_path = state
+        .blocks_dir
         .join(&chain)
         .join(format!("v{}", version))
         .join(&network)
@@ -260,9 +286,18 @@ async fn get_block(
     let file_size = contents.len();
 
     let mut headers = HeaderMap::new();
-    headers.insert("content-type", HeaderValue::from_static("application/octet-stream"));
-    headers.insert("content-length", HeaderValue::from_str(&file_size.to_string()).unwrap());
-    headers.insert("x-block-height", HeaderValue::from_str(&height.to_string()).unwrap());
+    headers.insert(
+        "content-type",
+        HeaderValue::from_static("application/octet-stream"),
+    );
+    headers.insert(
+        "content-length",
+        HeaderValue::from_str(&file_size.to_string()).unwrap(),
+    );
+    headers.insert(
+        "x-block-height",
+        HeaderValue::from_str(&height.to_string()).unwrap(),
+    );
     headers.insert("x-block-chain", HeaderValue::from_str(&chain).unwrap());
     headers.insert("x-block-network", HeaderValue::from_str(&network).unwrap());
     headers.insert(
@@ -279,7 +314,8 @@ async fn get_block_checksum(
 ) -> Result<impl IntoResponse, AppError> {
     validate_chain_network(&chain, &network)?;
 
-    let block_path = state.blocks_dir
+    let block_path = state
+        .blocks_dir
         .join(&chain)
         .join(format!("v{}", version))
         .join(&network)
@@ -324,7 +360,8 @@ async fn get_block_range(
         return Err(AppError::RangeTooLarge(state.max_batch));
     }
 
-    let blocks_dir = state.blocks_dir
+    let blocks_dir = state
+        .blocks_dir
         .join(&chain)
         .join(format!("v{}", version))
         .join(&network);
@@ -403,7 +440,10 @@ impl IntoResponse for AppError {
             AppError::RangeTooLarge(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             AppError::Io(e) => {
                 error!("IO error: {}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal server error".to_string(),
+                )
             }
         };
 

@@ -7,11 +7,11 @@
 //! Supports mainnet, testnet, and canary networks.
 
 use axum::{
-    Router,
     extract::{Path, State},
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
+    Router,
 };
 use clap::Parser;
 use sha2::{Digest, Sha256};
@@ -22,7 +22,7 @@ use tower_http::{
     cors::{Any, CorsLayer},
     limit::RequestBodyLimitLayer,
 };
-use tracing::{info, warn, error, Level};
+use tracing::{error, info, warn, Level};
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(Parser, Debug)]
@@ -52,11 +52,11 @@ const NETWORKS: &[&str] = &["mainnet", "testnet", "canary"];
 
 /// Known parameter file types with their expected patterns
 const PARAM_TYPES: &[&str] = &[
-    "powers-of-beta",      // Powers of tau ceremony output
-    "shifted-powers",      // Shifted powers for KZG
-    "proving-key",         // Circuit-specific proving keys
-    "verifying-key",       // Circuit-specific verification keys
-    "universal-srs",       // Universal structured reference string
+    "powers-of-beta", // Powers of tau ceremony output
+    "shifted-powers", // Shifted powers for KZG
+    "proving-key",    // Circuit-specific proving keys
+    "verifying-key",  // Circuit-specific verification keys
+    "universal-srs",  // Universal structured reference string
 ];
 
 #[tokio::main]
@@ -64,7 +64,11 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     // Initialize logging
-    let level = if args.verbose { Level::DEBUG } else { Level::INFO };
+    let level = if args.verbose {
+        Level::DEBUG
+    } else {
+        Level::INFO
+    };
     let subscriber = FmtSubscriber::builder()
         .with_max_level(level)
         .with_target(false)
@@ -192,8 +196,14 @@ async fn serve_param(
     let contents = fs::read(&file_path).await?;
 
     let mut response_headers = HeaderMap::new();
-    response_headers.insert("content-type", HeaderValue::from_static("application/octet-stream"));
-    response_headers.insert("content-length", HeaderValue::from_str(&file_size.to_string()).unwrap());
+    response_headers.insert(
+        "content-type",
+        HeaderValue::from_static("application/octet-stream"),
+    );
+    response_headers.insert(
+        "content-length",
+        HeaderValue::from_str(&file_size.to_string()).unwrap(),
+    );
     response_headers.insert("accept-ranges", HeaderValue::from_static("bytes"));
     response_headers.insert(
         "content-disposition",
@@ -244,8 +254,14 @@ async fn serve_range_request(
     file.read_exact(&mut buffer).await?;
 
     let mut headers = HeaderMap::new();
-    headers.insert("content-type", HeaderValue::from_static("application/octet-stream"));
-    headers.insert("content-length", HeaderValue::from_str(&length.to_string()).unwrap());
+    headers.insert(
+        "content-type",
+        HeaderValue::from_static("application/octet-stream"),
+    );
+    headers.insert(
+        "content-length",
+        HeaderValue::from_str(&length.to_string()).unwrap(),
+    );
     headers.insert("accept-ranges", HeaderValue::from_static("bytes"));
     headers.insert(
         "content-range",
@@ -313,7 +329,8 @@ async fn get_metadata(
     let metadata = fs::metadata(&file_path).await?;
 
     // Determine param type from filename
-    let param_type = PARAM_TYPES.iter()
+    let param_type = PARAM_TYPES
+        .iter()
         .find(|&&t| filename.contains(t))
         .unwrap_or(&"unknown");
 
@@ -354,7 +371,10 @@ impl IntoResponse for AppError {
             AppError::InvalidRange => (StatusCode::RANGE_NOT_SATISFIABLE, self.to_string()),
             AppError::Io(e) => {
                 error!("IO error: {}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal server error".to_string(),
+                )
             }
         };
 
