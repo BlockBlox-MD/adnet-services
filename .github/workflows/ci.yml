@@ -1,4 +1,6 @@
-# ADnet Services Continuous Integration
+# # ADnet Services Continuous Integration
+#
+# REPO_ACCESS_TOKEN secret required for cross-repo checkout
 #
 # Runs on:
 #   - Push to main/develop branches
