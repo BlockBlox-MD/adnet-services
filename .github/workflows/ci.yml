@@ -1,0 +1,232 @@
+# ADnet Services Continuous Integration
+#
+# Runs on:
+#   - Push to main/develop branches
+#   - Pull requests to main/develop
+#
+# Jobs:
+#   - Build: Compile all packages
+#   - Test: Run all tests
+#   - Lint: Run clippy and rustfmt
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  LIBCLANG_PATH: /usr/lib/llvm-14/lib
+
+jobs:
+  # ==========================================================================
+  # Build Job
+  # ==========================================================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout adnet-services
+        uses: actions/checkout@v4
+        with:
+          path: adnet-services
+
+      - name: Checkout alphavm
+        uses: actions/checkout@v4
+        with:
+          repository: BlockBlox-MD/alphavm
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          path: alphavm
+
+      - name: Checkout deltavm
+        uses: actions/checkout@v4
+        with:
+          repository: BlockBlox-MD/deltavm
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          path: deltavm
+
+      - name: Configure git credentials for cargo
+        run: |
+          git config --global credential.helper store
+          echo "https://x-access-token:${{ secrets.REPO_ACCESS_TOKEN }}@github.com" > ~/.git-credentials
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            clang-14 \
+            llvm-14 \
+            libclang-14-dev \
+            pkg-config \
+            libssl-dev
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: adnet-services/target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-
+
+      - name: Build all packages
+        working-directory: adnet-services
+        run: cargo build --release --workspace
+
+  # ==========================================================================
+  # Test Job
+  # ==========================================================================
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build
+
+    steps:
+      - name: Checkout adnet-services
+        uses: actions/checkout@v4
+        with:
+          path: adnet-services
+
+      - name: Checkout alphavm
+        uses: actions/checkout@v4
+        with:
+          repository: BlockBlox-MD/alphavm
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          path: alphavm
+
+      - name: Checkout deltavm
+        uses: actions/checkout@v4
+        with:
+          repository: BlockBlox-MD/deltavm
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          path: deltavm
+
+      - name: Configure git credentials for cargo
+        run: |
+          git config --global credential.helper store
+          echo "https://x-access-token:${{ secrets.REPO_ACCESS_TOKEN }}@github.com" > ~/.git-credentials
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            clang-14 \
+            llvm-14 \
+            libclang-14-dev \
+            pkg-config \
+            libssl-dev
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            adnet-services/target
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-test-
+
+      - name: Run tests
+        working-directory: adnet-services
+        run: cargo test --workspace --release
+
+  # ==========================================================================
+  # Lint Job
+  # ==========================================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout adnet-services
+        uses: actions/checkout@v4
+        with:
+          path: adnet-services
+
+      - name: Checkout alphavm
+        uses: actions/checkout@v4
+        with:
+          repository: BlockBlox-MD/alphavm
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          path: alphavm
+
+      - name: Checkout deltavm
+        uses: actions/checkout@v4
+        with:
+          repository: BlockBlox-MD/deltavm
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          path: deltavm
+
+      - name: Configure git credentials for cargo
+        run: |
+          git config --global credential.helper store
+          echo "https://x-access-token:${{ secrets.REPO_ACCESS_TOKEN }}@github.com" > ~/.git-credentials
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            clang-14 \
+            llvm-14 \
+            libclang-14-dev \
+            pkg-config \
+            libssl-dev
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            adnet-services/target
+          key: ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-lint-
+
+      - name: Install nightly for rustfmt
+        run: rustup toolchain install nightly --component rustfmt
+
+      - name: Check formatting
+        working-directory: adnet-services
+        run: cargo +nightly fmt --all -- --check
+
+      - name: Run Clippy
+        working-directory: adnet-services
+        run: cargo clippy --workspace --all-targets -- -D warnings
