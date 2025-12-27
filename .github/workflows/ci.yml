@@ -54,9 +54,11 @@ jobs:
           path: deltavm
 
       - name: Configure git credentials for cargo
+        env:
+          TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
         run: |
           # Use URL rewriting to inject token for all GitHub URLs
-          git config --global url."https://x-access-token:${{ secrets.REPO_ACCESS_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
 
       - name: Install system dependencies
         run: |
@@ -127,9 +129,11 @@ jobs:
           path: deltavm
 
       - name: Configure git credentials for cargo
+        env:
+          TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
         run: |
           # Use URL rewriting to inject token for all GitHub URLs
-          git config --global url."https://x-access-token:${{ secrets.REPO_ACCESS_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
 
       - name: Install system dependencies
         run: |
@@ -190,9 +194,11 @@ jobs:
           path: deltavm
 
       - name: Configure git credentials for cargo
+        env:
+          TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
         run: |
           # Use URL rewriting to inject token for all GitHub URLs
-          git config --global url."https://x-access-token:${{ secrets.REPO_ACCESS_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
 
       - name: Install system dependencies
         run: |
