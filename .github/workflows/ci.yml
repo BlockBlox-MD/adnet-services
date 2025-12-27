@@ -54,11 +54,13 @@ jobs:
           path: deltavm
 
       - name: Configure git credentials for cargo
-        env:
-          TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
         run: |
           # Use URL rewriting to inject token for all GitHub URLs
+          TOKEN=$(echo "${{ secrets.REPO_ACCESS_TOKEN }}" | tr -d '\n\r')
           git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
+          mkdir -p ~/.cargo
+          echo '[net]' >> ~/.cargo/config.toml
+          echo 'git-fetch-with-cli = true' >> ~/.cargo/config.toml
 
       - name: Install system dependencies
         run: |
@@ -129,11 +131,13 @@ jobs:
           path: deltavm
 
       - name: Configure git credentials for cargo
-        env:
-          TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
         run: |
           # Use URL rewriting to inject token for all GitHub URLs
+          TOKEN=$(echo "${{ secrets.REPO_ACCESS_TOKEN }}" | tr -d '\n\r')
           git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
+          mkdir -p ~/.cargo
+          echo '[net]' >> ~/.cargo/config.toml
+          echo 'git-fetch-with-cli = true' >> ~/.cargo/config.toml
 
       - name: Install system dependencies
         run: |
@@ -194,11 +198,13 @@ jobs:
           path: deltavm
 
       - name: Configure git credentials for cargo
-        env:
-          TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
         run: |
           # Use URL rewriting to inject token for all GitHub URLs
+          TOKEN=$(echo "${{ secrets.REPO_ACCESS_TOKEN }}" | tr -d '\n\r')
           git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
+          mkdir -p ~/.cargo
+          echo '[net]' >> ~/.cargo/config.toml
+          echo 'git-fetch-with-cli = true' >> ~/.cargo/config.toml
 
       - name: Install system dependencies
         run: |
